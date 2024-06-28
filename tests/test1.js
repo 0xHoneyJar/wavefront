@@ -29,16 +29,17 @@ const fourThousand = convert("4000", 18);
 const tenThousand = convert("10000", 18);
 const oneHundredThousand = convert("100000", 18);
 
-let owner, multisig, user0, user1, user2;
+let owner, multisig, user0, user1, user2, treasury1;
 let memeFactory, meme1, meme2, meme3;
 let factory, multicallSubgraph, multicallFrontend, router;
-let base, treasury;
+let base, treasury0;
 
 describe("local: test1", function () {
   before("Initial set up", async function () {
     console.log("Begin Initialization");
 
-    [owner, multisig, user0, user1, user2] = await ethers.getSigners();
+    [owner, multisig, user0, user1, user2, treasury1] =
+      await ethers.getSigners();
 
     const baseArtifact = await ethers.getContractFactory("Base");
     base = await baseArtifact.deploy();
@@ -47,7 +48,7 @@ describe("local: test1", function () {
     const treasuryArtifact = await ethers.getContractFactory(
       "WaveFrontTreasury"
     );
-    treasury = await treasuryArtifact.deploy(base.address, owner.address);
+    treasury0 = await treasuryArtifact.deploy(base.address, owner.address);
     console.log("- Treasury Initialized");
 
     const memeFactoryArtifact = await ethers.getContractFactory("MemeFactory");
@@ -58,7 +59,8 @@ describe("local: test1", function () {
     factory = await factoryArtifact.deploy(
       memeFactory.address,
       base.address,
-      treasury.address
+      treasury0.address,
+      treasury1.address
     );
     console.log("- WaveFront Factory Initialized");
 
@@ -288,8 +290,8 @@ describe("local: test1", function () {
 
   it("Treasury Operations", async function () {
     console.log("******************************************************");
-    await treasury.borrow([meme1.address, meme2.address]);
-    await treasury.withdraw();
+    await treasury0.borrow([meme1.address, meme2.address]);
+    await treasury0.withdraw();
   });
 
   it("Meme Data", async function () {
@@ -302,7 +304,7 @@ describe("local: test1", function () {
     console.log("******************************************************");
     let res = await multicallFrontend.getPageData(
       meme2.address,
-      treasury.address
+      treasury0.address
     );
     console.log(res);
   });
@@ -338,13 +340,13 @@ describe("local: test1", function () {
     console.log(res);
   });
 
-  it("Owner sets treasury address to user1", async function () {
+  it("Owner sets treasury0 address to user1", async function () {
     console.log("******************************************************");
-    await treasury.connect(owner).setTreasury(user1.address);
-    await expect(treasury.connect(user1).setTreasury(user0.address)).to.be
+    await treasury0.connect(owner).setTreasury(user1.address);
+    await expect(treasury0.connect(user1).setTreasury(user0.address)).to.be
       .reverted;
-    await treasury.withdraw();
-    await treasury.connect(owner).setTreasury(owner.address);
+    await treasury0.withdraw();
+    await treasury0.connect(owner).setTreasury(owner.address);
   });
 
   it("User1 burns 10 meme", async function () {

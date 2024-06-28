@@ -48,7 +48,8 @@ contract WaveFrontFactory is Ownable {
     address public immutable base; // Base token address
     address public immutable memeFactory; // Meme factory address
     
-    address public treasury; // Treasury address
+    address public treasury0; // Treasury0 address
+    address public treasury1; // Treasury1 address
     uint256 public minAmountIn = 0.001 ether; // Minimum amount of base token required to create a token
 
     uint256 public index = 1; // Current index counter
@@ -65,11 +66,13 @@ contract WaveFrontFactory is Ownable {
     error WaveFrontFactory__SymbolLimitExceeded();
     error WaveFrontFactory__InsufficientAmountIn();
     error WaveFrontFactory__InvalidAddress();
+    error WaveFrontFactory__Unauthorized();
 
     /*----------  EVENTS ------------------------------------------------*/
     
     event WaveFrontFactory__MemeCreated(address meme, address preMeme, string name, string symbol, string uri, address account);
-    event WaveFrontFactory__TreasuryUpdated(address treasury);
+    event WaveFrontFactory__Treasury0Updated(address treasury0);
+    event WaveFrontFactory__Treasury1Updated(address treasury1);
     event WaveFrontFactory__MinAmountInUpdated(uint256 minAmountIn);
 
     /*----------  FUNCTIONS  --------------------------------------------*/
@@ -78,12 +81,14 @@ contract WaveFrontFactory is Ownable {
      * @dev Initializes the WaveFrontFactory with necessary contract addresses and settings.
      * @param _memeFactory Address of the factory contract to create new memes.
      * @param _base Address of the base meme used in the ecosystem.
-     * @param _treasury Address of the treasury for fee collection and fund management.
+     * @param _treasury0 Address of the treasury0 for fee collection and fund management.
+     * @param _treasury1 Address of the treasury1 for fee collection and fund management.
      */
-    constructor(address _memeFactory, address _base, address _treasury) {
+    constructor(address _memeFactory, address _base, address _treasury0, address _treasury1) {
         memeFactory = _memeFactory;
         base = _base;
-        treasury = _treasury;
+        treasury0 = _treasury0;
+        treasury1 = _treasury1;
     }
 
     /**
@@ -132,12 +137,23 @@ contract WaveFrontFactory is Ownable {
 
     /**
      * @dev Updates the treasury address, which is a privileged operation only the contract owner can perform.
-     * @param _treasury The new treasury address.
+     * @param _treasury0 The new treasury address.
      */
-    function setTreasury(address _treasury) external onlyOwner {
-        if (_treasury == address(0)) revert WaveFrontFactory__InvalidAddress();
-        treasury = _treasury;
-        emit WaveFrontFactory__TreasuryUpdated(_treasury);
+    function setTreasury0(address _treasury0) external onlyOwner {
+        if (_treasury0 == address(0)) revert WaveFrontFactory__InvalidAddress();
+        treasury0 = _treasury0;
+        emit WaveFrontFactory__Treasury0Updated(_treasury0);
+    }
+
+    /**
+     * @dev Updates the treasury address, which is a privileged operation only the contract owner can perform.
+     * @param _treasury1 The new treasury address.
+     */
+    function setTreasury1(address _treasury1) external {
+        if (msg.sender != treasury1) revert WaveFrontFactory__Unauthorized();
+        if (_treasury1 == address(0)) revert WaveFrontFactory__InvalidAddress();
+        treasury1 = _treasury1;
+        emit WaveFrontFactory__Treasury1Updated(_treasury1);
     }
 
     /**

@@ -45,7 +45,8 @@ import "./FixedPointMathLib.sol";
  */
 
 interface IWaveFrontFactory {
-    function treasury() external view returns (address);
+    function treasury0() external view returns (address);
+    function treasury1() external view returns (address);
 }
 
 contract PreMeme is ReentrancyGuard {
@@ -200,7 +201,6 @@ contract Meme is ERC20, ERC20Permit, ERC20Votes, ReentrancyGuard {
     event Meme__ProviderFee(address indexed account, uint256 amountBase, uint256 amountMeme);
     event Meme__ProtocolFee(address indexed account, uint256 amountBase, uint256 amountMeme);
     event Meme__CreatorFee(address indexed account, uint256 amountBase, uint256 amountMeme);
-    event Meme__StatusFee(address indexed account, uint256 amountBase, uint256 amountMeme);
     event Meme__Burn(address indexed account, uint256 amountMeme);
     event Meme__Donated(address indexed account, uint256 amountBase);
     event Meme__ExternalBurn(address indexed account, uint256 amountMeme);
@@ -254,7 +254,7 @@ contract Meme is ERC20, ERC20Permit, ERC20Votes, ReentrancyGuard {
         ERC20Permit(_name)
     {
         uri = _uri;
-        status = "Overwrite to set the caption and earn.";
+        status = "Overwrite to set the caption.";
         statusHolder = _statusHolder;
         creator = _statusHolder;
         waveFrontFactory = _waveFrontFactory;
@@ -292,21 +292,7 @@ contract Meme is ERC20, ERC20Permit, ERC20Votes, ReentrancyGuard {
         emit Meme__Buy(msg.sender, to, amountIn, amountOut);
 
         IERC20(base).safeTransferFrom(msg.sender, address(this), amountIn);
-        uint256 feeAmount = feeBase * FEE_AMOUNT / DIVISOR;
-        if (provider != address(0)) {
-            IERC20(base).safeTransfer(provider, feeAmount);
-            emit Meme__ProviderFee(provider, feeAmount, 0);
-            feeBase -= feeAmount;
-        }
-        IERC20(base).safeTransfer(statusHolder, feeAmount);
-        emit Meme__StatusFee(statusHolder, feeAmount, 0);
-        IERC20(base).safeTransfer(creator, feeAmount);
-        emit Meme__CreatorFee(creator, feeAmount, 0);
-        address treasury = IWaveFrontFactory(waveFrontFactory).treasury();
-        IERC20(base).safeTransfer(treasury, feeAmount);
-        emit Meme__ProtocolFee(treasury, feeAmount, 0);
-        feeBase -= (3 * feeAmount);
-
+        feeBase = _processBuyFees(feeBase, provider);
         _mint(to, amountOut);
         _addBaseReserves(feeBase); 
     }
@@ -337,21 +323,7 @@ contract Meme is ERC20, ERC20Permit, ERC20Votes, ReentrancyGuard {
 
         emit Meme__Sell(msg.sender, to, amountIn, amountOut);
         
-        uint256 feeAmount = feeMeme * FEE_AMOUNT / DIVISOR;
-        if (provider != address(0)) {
-            _mint(provider, feeAmount);
-            emit Meme__ProviderFee(provider, 0, feeAmount);
-            feeMeme -= feeAmount;
-        }
-        _mint(statusHolder, feeAmount);
-        emit Meme__StatusFee(statusHolder, 0, feeAmount);
-        _mint(creator, feeAmount);
-        emit Meme__CreatorFee(creator, 0, feeAmount);
-        address treasury = IWaveFrontFactory(waveFrontFactory).treasury();
-        _mint(treasury, feeAmount);
-        emit Meme__ProtocolFee(treasury, 0, feeAmount);
-        feeMeme -= (3 * feeAmount);
-
+        feeMeme = _processSellFees(feeMeme, provider);
         _burn(msg.sender, amountIn - feeMeme);
         _burnMemeReserves(feeMeme);
         IERC20(base).safeTransfer(to, amountOut);
@@ -455,6 +427,10 @@ contract Meme is ERC20, ERC20Permit, ERC20Votes, ReentrancyGuard {
         emit Meme__MarketOpened();
     }
 
+    /**
+     * @dev Allows the meme creator to update the creator address.
+     * @param newCreator The new address of the meme creator.
+     */
     function setCreator(address newCreator) 
         external 
     {
@@ -463,12 +439,55 @@ contract Meme is ERC20, ERC20Permit, ERC20Votes, ReentrancyGuard {
         creator = newCreator;
     }
 
+    /**
+     * @dev Allows the meme creator to set the canDonateBurn flag for an account.
+     * @param account The address of the account to set the flag for.
+     * @param flag The new value of the canDonateBurn flag.
+     */
     function setCanDonateBurn(address account, bool flag) 
         external 
     {
         if (msg.sender != creator) revert Meme__NotAuthorized();
         account_CanDonateBurn[account] = flag;
         emit Meme__CanDonateBurnSet(account, flag);
+    }
+
+    function _processBuyFees(uint256 feeBase, address provider) internal returns (uint256 newFeeBase) {
+        uint256 feeAmount = feeBase * FEE_AMOUNT / DIVISOR;
+        if (provider != address(0)) {
+            IERC20(base).safeTransfer(provider, feeAmount);
+            emit Meme__ProviderFee(provider, feeAmount, 0);
+            feeBase -= feeAmount;
+        }
+        IERC20(base).safeTransfer(creator, feeAmount);
+        emit Meme__CreatorFee(creator, feeAmount, 0);
+        address treasury0 = IWaveFrontFactory(waveFrontFactory).treasury0();
+        IERC20(base).safeTransfer(treasury0, feeAmount);
+        emit Meme__ProtocolFee(treasury0, feeAmount, 0);
+        address treasury1 = IWaveFrontFactory(waveFrontFactory).treasury1();
+        IERC20(base).safeTransfer(treasury1, feeAmount);
+        emit Meme__ProtocolFee(treasury1, feeAmount, 0);
+        feeBase -= (3 * feeAmount);
+        return feeBase;
+    }
+
+    function _processSellFees(uint256 feeMeme, address provider) internal returns (uint256 newFeeMeme) {
+        uint256 feeAmount = feeMeme * FEE_AMOUNT / DIVISOR;
+        if (provider != address(0)) {
+            _mint(provider, feeAmount);
+            emit Meme__ProviderFee(provider, 0, feeAmount);
+            feeMeme -= feeAmount;
+        }
+        _mint(creator, feeAmount);
+        emit Meme__CreatorFee(creator, 0, feeAmount);
+        address treasury0 = IWaveFrontFactory(waveFrontFactory).treasury0();
+        _mint(treasury0, feeAmount);
+        emit Meme__ProtocolFee(treasury0, 0, feeAmount);
+        address treasury1 = IWaveFrontFactory(waveFrontFactory).treasury1();
+        _mint(treasury1, feeAmount);
+        emit Meme__ProtocolFee(treasury1, 0, feeAmount);
+        feeMeme -= (3 * feeAmount);
+        return feeMeme;
     }
 
     /**

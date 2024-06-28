@@ -25,16 +25,17 @@ const fourThousand = convert("4000", 18);
 const tenThousand = convert("10000", 18);
 const oneHundredThousand = convert("100000", 18);
 
-let owner, multisig, user0, user1, user2;
+let owner, multisig, user0, user1, user2, treasury1;
 let memeFactory, meme1, meme2, meme3;
 let factory, multicallSubgraph, multicallFrontend, router;
-let base, treasury;
+let base, treasury0;
 
 describe("local: test0", function () {
   before("Initial set up", async function () {
     console.log("Begin Initialization");
 
-    [owner, multisig, user0, user1, user2] = await ethers.getSigners();
+    [owner, multisig, user0, user1, user2, treasury1] =
+      await ethers.getSigners();
 
     const baseArtifact = await ethers.getContractFactory("Base");
     base = await baseArtifact.deploy();
@@ -43,7 +44,7 @@ describe("local: test0", function () {
     const treasuryArtifact = await ethers.getContractFactory(
       "WaveFrontTreasury"
     );
-    treasury = await treasuryArtifact.deploy(base.address, owner.address);
+    treasury0 = await treasuryArtifact.deploy(base.address, owner.address);
     console.log("- Treasury Initialized");
 
     const memeFactoryArtifact = await ethers.getContractFactory("MemeFactory");
@@ -54,7 +55,8 @@ describe("local: test0", function () {
     factory = await factoryArtifact.deploy(
       memeFactory.address,
       base.address,
-      treasury.address
+      treasury0.address,
+      treasury1.address
     );
     console.log("- WaveFront Factory Initialized");
 
@@ -833,11 +835,11 @@ describe("local: test0", function () {
 
   it("WaveFrontFactory Coverage", async function () {
     console.log("******************************************************");
-    await expect(factory.connect(user0).setTreasury(user0.address)).to.be
+    await expect(factory.connect(user0).setTreasury0(user0.address)).to.be
       .reverted;
-    await factory.connect(owner).setTreasury(user0.address);
+    await factory.connect(owner).setTreasury0(user0.address);
     await expect(factory.connect(user0).setMinAmountIn(one)).to.be.reverted;
-    await factory.connect(owner).setTreasury(treasury.address);
+    await factory.connect(owner).setTreasury0(treasury0.address);
     await factory.connect(owner).setMinAmountIn(one);
     await factory.connect(owner).setMinAmountIn(pointZeroZeroOne);
   });
@@ -908,7 +910,7 @@ describe("local: test0", function () {
     console.log("******************************************************");
     let res = await multicallFrontend.getPageData(
       meme3.address,
-      treasury.address
+      treasury0.address
     );
     console.log(res);
   });
@@ -916,13 +918,13 @@ describe("local: test0", function () {
   // it("Treasury sells meme3", async function () {
   //   console.log("******************************************************");
   //   await meme3
-  //     .connect(treasury)
-  //     .approve(router.address, await meme3.balanceOf(treasury.address));
+  //     .connect(treasury0)
+  //     .approve(router.address, await meme3.balanceOf(treasury0.address));
   //   await router
-  //     .connect(treasury)
+  //     .connect(treasury0)
   //     .sell(
   //       meme3.address,
-  //       await meme3.balanceOf(treasury.address),
+  //       await meme3.balanceOf(treasury0.address),
   //       0,
   //       1904422437
   //     );
@@ -941,13 +943,13 @@ describe("local: test0", function () {
   // it("Treasury sells meme3", async function () {
   //   console.log("******************************************************");
   //   await meme3
-  //     .connect(treasury)
-  //     .approve(router.address, await meme3.balanceOf(treasury.address));
+  //     .connect(treasury0)
+  //     .approve(router.address, await meme3.balanceOf(treasury0.address));
   //   await router
-  //     .connect(treasury)
+  //     .connect(treasury0)
   //     .sell(
   //       meme3.address,
-  //       await meme3.balanceOf(treasury.address),
+  //       await meme3.balanceOf(treasury0.address),
   //       0,
   //       1904422437
   //     );
@@ -961,8 +963,8 @@ describe("local: test0", function () {
 
   it("Treasury operations", async function () {
     console.log("******************************************************");
-    await treasury.borrow([meme1.address, meme2.address, meme3.address]);
-    await treasury.withdraw();
+    await treasury0.borrow([meme1.address, meme2.address, meme3.address]);
+    await treasury0.withdraw();
   });
 
   it("Page Data", async function () {

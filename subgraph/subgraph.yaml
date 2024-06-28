@@ -47,9 +47,9 @@ dataSources:
       eventHandlers:
         - event: WaveFrontRouter__AffiliateSet(indexed address,indexed address)
           handler: handleWaveFrontRouter__AffiliateSet
-        - event: WaveFrontRouter__Buy(indexed address,indexed address,uint256,uint256,uint256,uint256)
+        - event: WaveFrontRouter__Buy(indexed address,indexed address,uint256,uint256,uint256,uint256,string)
           handler: handleWaveFrontRouter__Buy
-        - event: WaveFrontRouter__Sell(indexed address,indexed address,uint256,uint256,uint256,uint256)
+        - event: WaveFrontRouter__Sell(indexed address,indexed address,uint256,uint256,uint256,uint256,string)
           handler: handleWaveFrontRouter__Sell
       file: ./src/wave-front-router.ts
   - kind: ethereum
